@@ -5,9 +5,17 @@ alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 class Substitution:
     def __init__(self, key: str) -> None:
         self.key = key # key used for the substitution cipher
+        self.reversedKey = self.reverseKey(key) # the inverse mapping of the key
 
-    def substitute(self, letter: str) -> str:
-        return self.key[alphabet.index(letter)]
+    def substitute(self, letter: str, k: str) -> str: # k is the key to use for the substitution (either standard or reversed)
+        return k[alphabet.index(letter)]
+    
+    # returns the inverse mapping of the key (think inverse functions from maths)
+    def reverseKey(self, key: str) -> str:
+        rev = [''] * 26    # Create a list of 26 empty strings
+        for i, char in enumerate(key):
+            rev[ord(char) - ord('A')] = chr(i + ord('A'))  # Map each character to its corresponding position
+        return ''.join(rev)  # Join the list into a string and return it
 
 
 # The rotor on its own performa a rather simple substitution cipher
@@ -49,11 +57,18 @@ class Assembly:
         for i in range(0, 1):
             if self.rotors[i].rotateNext:
                 self.rotors[i + 1].rotate()
+            self.rotors[i].rotate()
 
     def rotorEncrypt(self, letter: str) -> str:
         for rotor in self.rotors:
-            letter = rotor.substitute(letter)
+            letter = rotor.substitute(letter, rotor.key)
         return letter
+    
+    def rotorReverseEncrypt(self, letter: str) -> str: # sending the signal back through the rotors but in the reversed wiring path
+        for rotor in reversed(self.rotors):
+            letter = rotor.substitute(letter, rotor.reversedKey)
+        return letter
+
 
 class Machine:
     def __init__(self, r1: Rotor, r2: Rotor, r3: Rotor, ref: Reflector, plugs: Plugboard) -> None:
@@ -62,7 +77,17 @@ class Machine:
         self.plugboard = plugs
 
     def encrypt(self, plaintext: str) -> str:
-        pass
+        ciphertext = ""  # Initialize the ciphertext variable
+        for char in plaintext:
+            encryptedChar = self.plugboard.substitute(char, self.plugboard.key) # character goes through the plugboard initially
+            encryptedChar = self.assembly.rotorEncrypt(encryptedChar) # then through rotors
+            encryptedChar = self.reflector.substitute(encryptedChar, self.reflector.key) # then through the reflector (this is the flaw in the machine - the reflector cannot assign a letter to itself)
+            encryptedChar = self.assembly.rotorReverseEncrypt(encryptedChar) # then back through the rotors in the reversed wiring path
+            encryptedChar = self.plugboard.substitute(encryptedChar, self.plugboard.key) # then back through the plugboard
+            ciphertext += encryptedChar
+            self.assembly.advanceRotors()
+        return ciphertext
+            
 
 
 # Testing
@@ -72,15 +97,20 @@ if __name__ == "__main__":
     rotor2 = Rotor("AJDKSIRUXBLHWTMCQGZNPYFVOE", "E")
     rotor3 = Rotor("BDFHJLCPRTXVZNYEIWGAKMUSQO", "O")
 
-    for i in range(26):
-        print(rotor1.key[0])
-        print(rotor1.rotateNext)
-        rotor1.rotate()
+    # Initialising the reflector
+    reflector = Reflector("YRUHQSLDPXNGOKMIEBFZCWVJAT")
 
-    message = "HELLOWORLD"
-    ciphertext = ""
+    # Initialise the plugboard
+    plugboard = Plugboard(alphabet) # no swapping of letters for now
 
-    for letter in message:
-        ciphertext += rotor1.substitute(letter)
+    # Initialising the machine
+    enigma = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
+
+    # Get user input
+    plaintext = input("Enter a message: ")
     
-    print(ciphertext)
+    # Encode the message
+    ciphertext = enigma.encrypt(plaintext)
+
+    # Print the encoded message
+    print(f"{ciphertext}")

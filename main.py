@@ -1,16 +1,16 @@
-# do imports here
+import machine as eg
 
 def main():
     
     # Get user input
     plaintext = input("Enter a message: ")
-    length = len(plaintext)
+    print("encrypting...")
 
     # TODO Encode the message
-    ciphertext = encode(plaintext)
+    ciphertext = eg.encrypt(plaintext)
 
     # Print the encoded message
-    print(f"{ciphertext}")
+    print(f"Encrypted: {ciphertext}")
 
 
 if __name__ == "__main__":
