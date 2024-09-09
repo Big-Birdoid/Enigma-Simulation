@@ -1,7 +1,7 @@
 
 alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-# parent class for the basic substitution cipher that both the rotors and reflector board are based on
+# parent class for the basic substitution cipher that the rotors, plugboard and reflector are based on
 class Substitution:
     def __init__(self, key: str) -> None:
         self.key = key # key used for the substitution cipher
@@ -25,6 +25,7 @@ class Rotor(Substitution):
         self.key = key # key used for the rotor's substitution cipher
         self.notch = notch # the position at which the rotor will rotate the next rotor
         self.rotateNext = False # whether the next rotor should rotate
+        self.initialPosition = key
 
     # simmulates the circular rotation of the rotor thing
     def rotate(self) -> None:
@@ -33,6 +34,10 @@ class Rotor(Substitution):
             self.rotateNext = True # signal for the next rotor to rotate
         else:
             self.rotateNext = False
+    
+    def reset(self) -> None: # reset the rotor to its initial position
+        self.key = self.initialPosition
+        self.rotateNext = False
 
 
 # The plugboard is also a simple substitution cipher
@@ -87,30 +92,28 @@ class Machine:
             ciphertext += encryptedChar
             self.assembly.advanceRotors()
         return ciphertext
-            
-
-
-# Testing
-if __name__ == "__main__":
-    # Initialising the rotors
-    rotor1 = Rotor("EKMFLGDQVZNTOWYHXUSPAIBRCJ", "J")
-    rotor2 = Rotor("AJDKSIRUXBLHWTMCQGZNPYFVOE", "E")
-    rotor3 = Rotor("BDFHJLCPRTXVZNYEIWGAKMUSQO", "O")
-
-    # Initialising the reflector
-    reflector = Reflector("YRUHQSLDPXNGOKMIEBFZCWVJAT")
-
-    # Initialise the plugboard
-    plugboard = Plugboard(alphabet) # no swapping of letters for now
-
-    # Initialising the machine
-    enigma = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
-
-    # Get user input
-    plaintext = input("Enter a message: ")
     
-    # Encode the message
-    ciphertext = enigma.encrypt(plaintext)
+    def reset_rotors(self) -> None:
+        for rotor in self.assembly.rotors:
+            rotor.reset()
 
-    # Print the encoded message
-    print(f"{ciphertext}")
+
+# Test the machine
+if __name__ == "__main__":
+    # All substutions are identity mappings
+    rotor1 = Rotor(alphabet, "Z")
+    rotor2 = Rotor(alphabet, "Z")
+    rotor3 = Rotor(alphabet, "Z")
+    reflector = Reflector(alphabet)
+    plugboard = Plugboard(alphabet)
+
+    machine = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
+    plaintext = "AAAAAAAAAAAAAAAAAAAAAAAAAA"
+    print("Plaintext:", plaintext)
+    ciphertext = machine.encrypt(plaintext)
+    print("Ciphertext:", ciphertext)
+
+    # Reset rotors before decryption
+    machine.reset_rotors()
+    decrypted_text = machine.encrypt(ciphertext)
+    print("Decrypted text:", decrypted_text)
