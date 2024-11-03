@@ -65,16 +65,23 @@ class Reflector(Substitution):
 
 
 # class for the whole rotor assembly
+# class for the whole rotor assembly
 class Assembly:
     def __init__(self, r1: Rotor, r2: Rotor, r3: Rotor) -> None:
         # the rotors in the assembly from rightmost to leftmost
         self.rotors = [r1, r2, r3]
     
     def advanceRotors(self) -> None:
-        for i in range(0, 1):
-            if self.rotors[i].rotateNext:
-                self.rotors[i + 1].rotate()
-            self.rotors[i].rotate()
+        # implement double-stepping mechanism
+        # if middle rotor is at notch, rotate middle and left rotors
+        if self.rotors[1].should_rotate_next():
+            self.rotors[1].rotate()
+            self.rotors[2].rotate()
+        # if right rotor is at notch, rotate middle rotor
+        elif self.rotors[0].should_rotate_next():
+            self.rotors[1].rotate()
+        # always rotate right rotor
+        self.rotors[0].rotate()
 
     def rotorEncrypt(self, letter: str) -> str:
         for rotor in self.rotors:
