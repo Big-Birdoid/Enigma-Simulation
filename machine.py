@@ -18,37 +18,49 @@ class Substitution:
         return ''.join(rev)  # Join the list into a string and return it
 
 
-# The rotor on its own performa a rather simple substitution cipher
+# The rotor on its own performs a rather simple substitution cipher
 class Rotor(Substitution):
-    def __init__(self, key: str, notch: str) -> None:
+    def __init__(self, key: str, notch: str, starting_position: str = 'A') -> None:
         super().__init__(key)
         self.key = key # key used for the rotor's substitution cipher
         self.notch = notch # the position at which the rotor will rotate the next rotor
-        self.rotateNext = False # whether the next rotor should rotate
-        self.initialPosition = key
+        # rotate to starting position
+        while self.key[0] != starting_position:
+            self.rotate()
+        self.initialPosition = self.key # store initial position for reset
 
-    # simmulates the circular rotation of the rotor thing
+    # simulates the circular rotation of the rotor thing
     def rotate(self) -> None:
         self.key = self.key[1:] + self.key[0]
-        if self.key[25] == self.notch: # if this rotation has moved from the notch letter
-            self.rotateNext = True # signal for the next rotor to rotate
-        else:
-            self.rotateNext = False
+    
+    # checks if this rotor should cause the next one to rotate
+    def should_rotate_next(self) -> bool:
+        return self.key[0] == self.notch
     
     def reset(self) -> None: # reset the rotor to its initial position
         self.key = self.initialPosition
-        self.rotateNext = False
 
 
-# The plugboard is also a simple substitution cipher
-# TODO make this only have 10 options for letter swapping rather than 26
+# The plugboard is also a simple substitution cipher but works in pairs
 class Plugboard(Substitution):
-    def __init__(self, key: str) -> None:
-        super().__init__(key)
+    def __init__(self, pairs: str = '') -> None:
+        # start with normal alphabet mapping
+        key = list(alphabet)
+        # swap the pairs of letters
+        for i in range(0, len(pairs), 2):
+            if i + 1 < len(pairs):
+                a, b = pairs[i], pairs[i + 1]
+                idx_a = alphabet.index(a)
+                idx_b = alphabet.index(b)
+                key[idx_a] = b
+                key[idx_b] = a
+        super().__init__(''.join(key))
 
 
+
+# The reflector ensures the encryption is reciprocal (if A->B then B->A)
 class Reflector(Substitution):
-    def __init__(self, key: str) -> None:
+    def __init__(self, key: str = "YRUHQSLDPXNGOKMIEBFZCWVJAT") -> None: # using historical Reflector B wiring
         super().__init__(key)
 
 
