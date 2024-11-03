@@ -133,7 +133,7 @@ if __name__ == "__main__":
     rotor2 = Rotor("AJDKSIRUXBLHWTMCQGZNPYFVOE", "E", starting_position='B')  # Rotor II
     rotor3 = Rotor("BDFHJLCPRTXVZNYEIWGAKMUSQO", "V", starting_position='C')  # Rotor III
     reflector = Reflector()  # Uses historical Reflector B wiring
-    plugboard = Plugboard("AMFԻՆVPSTUWZ")  # Example plugboard connections: A↔M, F↔I, N↔V, P↔S, T↔U, W↔Z
+    plugboard = Plugboard("AMFINVPSTUWZ")  # Example plugboard connections: A↔M, F↔I, N↔V, P↔S, T↔U, W↔Z
 
     machine = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
     plaintext = "HELLO WORLD"
