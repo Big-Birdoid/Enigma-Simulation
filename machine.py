@@ -101,14 +101,14 @@ class Machine:
 # Test the machine
 if __name__ == "__main__":
     # All substutions are identity mappings
-    rotor1 = Rotor(alphabet, "Z")
-    rotor2 = Rotor(alphabet, "Z")
-    rotor3 = Rotor(alphabet, "Z")
+    rotor1 = Rotor("YFBKTAXUQVMOZIJSPNLHRGCEWD", "Z")
+    rotor2 = Rotor("XQZIUHNBKJCVMFRLWDYGOESATP", "Z")
+    rotor3 = Rotor("ZTVIRKHQDXPNOLGYFMUACBWSJE", "Z")
     reflector = Reflector(alphabet)
     plugboard = Plugboard(alphabet)
 
     machine = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
-    plaintext = "AAAAAAAAAAAAAAAAAAAAAAAAAA"
+    plaintext = "HELLO"
     print("Plaintext:", plaintext)
     ciphertext = machine.encrypt(plaintext)
     print("Ciphertext:", ciphertext)
