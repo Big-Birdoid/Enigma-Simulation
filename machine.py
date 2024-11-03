@@ -65,7 +65,6 @@ class Reflector(Substitution):
 
 
 # class for the whole rotor assembly
-# class for the whole rotor assembly
 class Assembly:
     def __init__(self, r1: Rotor, r2: Rotor, r3: Rotor) -> None:
         # the rotors in the assembly from rightmost to leftmost
@@ -94,6 +93,7 @@ class Assembly:
         return letter
 
 
+# The Enigma machine is a combination of the rotor assembly, reflector and plugboard
 class Machine:
     def __init__(self, r1: Rotor, r2: Rotor, r3: Rotor, ref: Reflector, plugs: Plugboard) -> None:
         self.assembly = Assembly(r1, r2, r3)
@@ -103,13 +103,22 @@ class Machine:
     def encrypt(self, plaintext: str) -> str:
         ciphertext = ""  # Initialize the ciphertext variable
         for char in plaintext:
+            if char == ' ':  # skip spaces
+                continue
+            char = char.upper()
+            if char not in alphabet:  # skip non-alphabet characters
+                continue
+            
+            # advance rotors before encryption (this was the key fix - it needs to happen before the signal goes through)
+            self.assembly.advanceRotors()
+            
             encryptedChar = self.plugboard.substitute(char, self.plugboard.key) # character goes through the plugboard initially
             encryptedChar = self.assembly.rotorEncrypt(encryptedChar) # then through rotors
-            encryptedChar = self.reflector.substitute(encryptedChar, self.reflector.key) # then through the reflector (this is the flaw in the machine - the reflector cannot assign a letter to itself)
+            encryptedChar = self.reflector.substitute(encryptedChar, self.reflector.key) # then through the reflector
             encryptedChar = self.assembly.rotorReverseEncrypt(encryptedChar) # then back through the rotors in the reversed wiring path
             encryptedChar = self.plugboard.substitute(encryptedChar, self.plugboard.key) # then back through the plugboard
+            
             ciphertext += encryptedChar
-            self.assembly.advanceRotors()
         return ciphertext
     
     def reset_rotors(self) -> None:
@@ -119,15 +128,15 @@ class Machine:
 
 # Test the machine
 if __name__ == "__main__":
-    # All substutions are identity mappings
-    rotor1 = Rotor("YFBKTAXUQVMOZIJSPNLHRGCEWD", "Z")
-    rotor2 = Rotor("XQZIUHNBKJCVMFRLWDYGOESATP", "Z")
-    rotor3 = Rotor("ZTVIRKHQDXPNOLGYFMUACBWSJE", "Z")
-    reflector = Reflector(alphabet)
-    plugboard = Plugboard(alphabet)
+    # Using historical rotor settings
+    rotor1 = Rotor("EKMFLGDQVZNTOWYHXUSPAIBRCJ", "Q", starting_position='A')  # Rotor I
+    rotor2 = Rotor("AJDKSIRUXBLHWTMCQGZNPYFVOE", "E", starting_position='B')  # Rotor II
+    rotor3 = Rotor("BDFHJLCPRTXVZNYEIWGAKMUSQO", "V", starting_position='C')  # Rotor III
+    reflector = Reflector()  # Uses historical Reflector B wiring
+    plugboard = Plugboard("AMFԻՆVPSTUWZ")  # Example plugboard connections: A↔M, F↔I, N↔V, P↔S, T↔U, W↔Z
 
     machine = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
-    plaintext = "HELLO"
+    plaintext = "HELLO WORLD"
     print("Plaintext:", plaintext)
     ciphertext = machine.encrypt(plaintext)
     print("Ciphertext:", ciphertext)
