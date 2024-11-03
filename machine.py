@@ -68,7 +68,7 @@ class Plugboard(Substitution):
 
 # The Reflector ensures reciprocal encryption (A↔B)
 class Reflector(Substitution):
-    def __init__(self, key: str = "YRUHQSLDPXNGOKMIEBFZCWVJAT") -> None:
+    def __init__(self, key: str = "YRUHQSLDPXNGOKMIEBFZCWVJAT") -> None: # Historical reflector B key
         super().__init__(key)
 
 
