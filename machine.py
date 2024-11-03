@@ -1,99 +1,111 @@
-
 alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-# parent class for the basic substitution cipher that the rotors, plugboard and reflector are based on
+# Parent class for the basic substitution cipher that the rotors, plugboard, and reflector are based on
 class Substitution:
     def __init__(self, key: str) -> None:
-        self.key = key # key used for the substitution cipher
-        self.reversedKey = self.reverseKey(key) # the inverse mapping of the key
+        self.key = key  # Key used for the substitution cipher
+        self.reversedKey = self.reverseKey(key)  # The inverse mapping of the key
 
-    def substitute(self, letter: str, k: str) -> str: # k is the key to use for the substitution (either standard or reversed)
+    def substitute(self, letter: str, k: str) -> str:
+        """Uses the specified key (standard or reversed) to substitute the letter."""
         return k[alphabet.index(letter)]
-    
-    # returns the inverse mapping of the key (think inverse functions from maths)
+
     def reverseKey(self, key: str) -> str:
-        rev = [''] * 26    # Create a list of 26 empty strings
+        """Returns the inverse mapping of the key (for backward signal flow)."""
+        rev = [''] * 26
         for i, char in enumerate(key):
-            rev[ord(char) - ord('A')] = chr(i + ord('A'))  # Map each character to its corresponding position
-        return ''.join(rev)  # Join the list into a string and return it
+            rev[ord(char) - ord('A')] = chr(i + ord('A'))
+        return ''.join(rev)
 
 
-# The rotor on its own performs a rather simple substitution cipher
+# The Rotor performs a simple substitution cipher with rotation capability
 class Rotor(Substitution):
     def __init__(self, key: str, notch: str, starting_position: str = 'A') -> None:
         super().__init__(key)
-        self.key = key # key used for the rotor's substitution cipher
-        self.notch = notch # the position at which the rotor will rotate the next rotor
-        # rotate to starting position
-        while self.key[0] != starting_position:
-            self.rotate()
-        self.initialPosition = self.key # store initial position for reset
+        self.notch = notch  # The rotor's notch position, which triggers the next rotor
+        # Position offset determines where the rotor starts in the alphabet (like turning it to a specific letter)
+        self.position = alphabet.index(starting_position)  
 
-    # simulates the circular rotation of the rotor thing
     def rotate(self) -> None:
-        self.key = self.key[1:] + self.key[0]
-    
-    # checks if this rotor should cause the next one to rotate
+        """Simulates the rotor's circular rotation by incrementing the position offset."""
+        self.position = (self.position + 1) % 26
+
     def should_rotate_next(self) -> bool:
-        return self.key[0] == self.notch
-    
-    def reset(self) -> None: # reset the rotor to its initial position
-        self.key = self.initialPosition
+        """Checks if this rotor should cause the next rotor to rotate (when at notch)."""
+        return alphabet[self.position] == self.notch
+
+    def forward_substitute(self, letter: str) -> str:
+        """Substitutes letter going forward through the rotor with current position offset."""
+        # Adjust for current rotor position
+        index = (alphabet.index(letter) + self.position) % 26
+        # Substitute using the key, then adjust back by position
+        substituted = self.key[index]
+        return alphabet[(alphabet.index(substituted) - self.position) % 26]
+
+    def backward_substitute(self, letter: str) -> str:
+        """Substitutes letter going backward through the rotor with current position offset."""
+        # Adjust for current rotor position
+        index = (alphabet.index(letter) + self.position) % 26
+        # Substitute using the reversed key, then adjust back by position
+        substituted = self.reversedKey[index]
+        return alphabet[(alphabet.index(substituted) - self.position) % 26]
 
 
-# The plugboard is also a simple substitution cipher but works in pairs
+# The Plugboard performs a simple substitution cipher with letter pairs
 class Plugboard(Substitution):
     def __init__(self, pairs: str = '') -> None:
-        # start with normal alphabet mapping
+        # Start with standard alphabet mapping
         key = list(alphabet)
-        # swap the pairs of letters
+        # Swap specified pairs in the key
         for i in range(0, len(pairs), 2):
             if i + 1 < len(pairs):
                 a, b = pairs[i], pairs[i + 1]
                 idx_a = alphabet.index(a)
                 idx_b = alphabet.index(b)
-                key[idx_a] = b
-                key[idx_b] = a
+                key[idx_a], key[idx_b] = b, a  # Swap the letter pair in the key
         super().__init__(''.join(key))
 
 
-
-# The reflector ensures the encryption is reciprocal (if A->B then B->A)
+# The Reflector ensures reciprocal encryption (A↔B)
 class Reflector(Substitution):
-    def __init__(self, key: str = "YRUHQSLDPXNGOKMIEBFZCWVJAT") -> None: # using historical Reflector B wiring
+    def __init__(self, key: str = "YRUHQSLDPXNGOKMIEBFZCWVJAT") -> None:
         super().__init__(key)
 
 
-# class for the whole rotor assembly
+# The Assembly contains all rotors and manages their stepping
 class Assembly:
     def __init__(self, r1: Rotor, r2: Rotor, r3: Rotor) -> None:
-        # the rotors in the assembly from rightmost to leftmost
+        # The rotors are arranged from rightmost to leftmost
         self.rotors = [r1, r2, r3]
-    
-    def advanceRotors(self) -> None:
-        # implement double-stepping mechanism
-        # if middle rotor is at notch, rotate middle and left rotors
+
+    def advance_rotors(self) -> None:
+        """Implements the double-stepping mechanism for rotor rotation."""
+        # If the middle rotor is at its notch, rotate both the middle and left rotors
         if self.rotors[1].should_rotate_next():
             self.rotors[1].rotate()
             self.rotors[2].rotate()
-        # if right rotor is at notch, rotate middle rotor
+        # If the right rotor is at its notch, rotate the middle rotor
         elif self.rotors[0].should_rotate_next():
             self.rotors[1].rotate()
-        # always rotate right rotor
+        # Always rotate the rightmost rotor
         self.rotors[0].rotate()
 
-    def rotorEncrypt(self, letter: str) -> str:
+    def rotor_encrypt(self, letter: str) -> str:
+        """Passes a letter forward through the rotor assembly."""
+        # The signal passes from right to left through each rotor
         for rotor in self.rotors:
-            letter = rotor.substitute(letter, rotor.key)
+            letter = rotor.forward_substitute(letter)
         return letter
-    
-    def rotorReverseEncrypt(self, letter: str) -> str: # sending the signal back through the rotors but in the reversed wiring path
+
+    def rotor_reverse_encrypt(self, letter: str) -> str:
+        """Passes a letter backward through the rotor assembly."""
+        # The signal returns from left to right through each rotor
         for rotor in reversed(self.rotors):
-            letter = rotor.substitute(letter, rotor.reversedKey)
+            letter = rotor.backward_substitute(letter)
         return letter
 
 
-# The Enigma machine is a combination of the rotor assembly, reflector and plugboard
+# The Machine combines plugboard, rotor assembly, and reflector for full encryption
 class Machine:
     def __init__(self, r1: Rotor, r2: Rotor, r3: Rotor, ref: Reflector, plugs: Plugboard) -> None:
         self.assembly = Assembly(r1, r2, r3)
@@ -101,47 +113,59 @@ class Machine:
         self.plugboard = plugs
 
     def encrypt(self, plaintext: str) -> str:
-        ciphertext = ""  # Initialize the ciphertext variable
+        """Encrypts or decrypts the plaintext by passing each letter through the Enigma components."""
+        ciphertext = ""
         for char in plaintext:
-            if char == ' ':  # skip spaces
+            if char == ' ':  # Skip spaces in the plaintext
+                ciphertext += ' '
                 continue
             char = char.upper()
-            if char not in alphabet:  # skip non-alphabet characters
+            if char not in alphabet:  # Skip non-alphabet characters
+                ciphertext += char
                 continue
-            
-            # advance rotors before encryption (this was the key fix - it needs to happen before the signal goes through)
-            self.assembly.advanceRotors()
-            
-            encryptedChar = self.plugboard.substitute(char, self.plugboard.key) # character goes through the plugboard initially
-            encryptedChar = self.assembly.rotorEncrypt(encryptedChar) # then through rotors
-            encryptedChar = self.reflector.substitute(encryptedChar, self.reflector.key) # then through the reflector
-            encryptedChar = self.assembly.rotorReverseEncrypt(encryptedChar) # then back through the rotors in the reversed wiring path
-            encryptedChar = self.plugboard.substitute(encryptedChar, self.plugboard.key) # then back through the plugboard
-            
-            ciphertext += encryptedChar
+
+            # Advance rotors before each letter encryption
+            self.assembly.advance_rotors()
+
+            # 1. Plugboard substitution
+            char = self.plugboard.substitute(char, self.plugboard.key)
+            # 2. Forward through the rotors
+            char = self.assembly.rotor_encrypt(char)
+            # 3. Reflector substitution
+            char = self.reflector.substitute(char, self.reflector.key)
+            # 4. Backward through the rotors
+            char = self.assembly.rotor_reverse_encrypt(char)
+            # 5. Final plugboard substitution
+            char = self.plugboard.substitute(char, self.plugboard.key)
+
+            ciphertext += char  # Append encrypted character to ciphertext
         return ciphertext
-    
+
     def reset_rotors(self) -> None:
+        """Resets each rotor to its starting position."""
         for rotor in self.assembly.rotors:
-            rotor.reset()
+            rotor.position = 0  # Reset position to initial
 
 
 # Test the machine
 if __name__ == "__main__":
-    # Using historical rotor settings
+    # Define historical rotor settings and configurations
     rotor1 = Rotor("EKMFLGDQVZNTOWYHXUSPAIBRCJ", "Q", starting_position='A')  # Rotor I
-    rotor2 = Rotor("AJDKSIRUXBLHWTMCQGZNPYFVOE", "E", starting_position='B')  # Rotor II
-    rotor3 = Rotor("BDFHJLCPRTXVZNYEIWGAKMUSQO", "V", starting_position='C')  # Rotor III
-    reflector = Reflector()  # Uses historical Reflector B wiring
-    plugboard = Plugboard("AMFINVPSTUWZ")  # Example plugboard connections: A↔M, F↔I, N↔V, P↔S, T↔U, W↔Z
+    rotor2 = Rotor("AJDKSIRUXBLHWTMCQGZNPYFVOE", "E", starting_position='A')  # Rotor II
+    rotor3 = Rotor("BDFHJLCPRTXVZNYEIWGAKMUSQO", "V", starting_position='A')  # Rotor III
+    reflector = Reflector()  # Reflector B configuration
+    plugboard = Plugboard("AMFINVPSTUWZ")  # Example plugboard pairs: A↔M, F↔I, etc.
 
+    # Initialize the Enigma machine with rotors, reflector, and plugboard
     machine = Machine(rotor1, rotor2, rotor3, reflector, plugboard)
+    
+    # Encrypt the plaintext message
     plaintext = "HELLO WORLD"
     print("Plaintext:", plaintext)
     ciphertext = machine.encrypt(plaintext)
     print("Ciphertext:", ciphertext)
 
-    # Reset rotors before decryption
+    # Reset rotors to initial state to decrypt
     machine.reset_rotors()
-    decrypted_text = machine.encrypt(ciphertext)
+    decrypted_text = machine.encrypt(ciphertext)  # Decrypt by re-encrypting the ciphertext
     print("Decrypted text:", decrypted_text)
